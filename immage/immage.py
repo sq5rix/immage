@@ -1,4 +1,6 @@
-
+"""
+image manipulation library
+"""
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance, ImageChops
 from PIL import ImageOps
@@ -11,13 +13,13 @@ class Immage:
     @classmethod
     def open(cls, image_path):
         """
-        Opens an image from the given path and returns an ImageProcessor instance.
+        Opens an image from the given path and returns an Immage instance.
 
         Parameters:
         - image_path: Path to the image file.
 
         Returns:
-        - ImageProcessor instance.
+        - Immage instance.
         """
         image = Image.open(image_path)
         return cls(image)
@@ -165,7 +167,7 @@ class Immage:
         - color_tint: RGB tuple for tinting the texture.
 
         Returns:
-        - ImageProcessor instance with the generated texture image.
+        - Immage instance with the generated texture image.
         """
         try:
             from noise import pnoise2
@@ -203,9 +205,9 @@ class Immage:
         texture_image = enhancer.enhance(1.2)
 
         # Add color tint
-        texture_image = ImageProcessor.add_color_tint(texture_image, tint_color=color_tint)
+        texture_image = Immage.add_color_tint(texture_image, tint_color=color_tint)
 
-        return ImageProcessor(texture_image)
+        return Immage(texture_image)
 
     @staticmethod
     def add_color_tint(image, tint_color=(238, 232, 205)):
@@ -226,7 +228,7 @@ class Immage:
         tinted_image = Image.composite(color_image, Image.new('RGB', image.size, (0, 0, 0)), image)
         return tinted_image
 
-    # Fractal-Based Upscaling
+
     def fractal_upscale(self, scale_factor=2, octaves=5):
         """
         Upscales an image and enhances it with fractal noise.
@@ -243,21 +245,26 @@ class Immage:
         new_height = int(original_height * scale_factor)
         upscaled_image = self.image.resize((new_width, new_height), resample=Image.BICUBIC)
 
-        # Generate fractal noise
+        # Generate fractal noise as a multiplier in the range [0.95, 1.05]
         fractal_noise = self.generate_fractal_noise(new_width, new_height, scale=1.0, octaves=octaves)
-        fractal_noise_image = Image.fromarray(fractal_noise)
+        # fractal_noise is a NumPy array in the range [0.95, 1.05]
 
-        # Adjust the fractal noise intensity
-        enhancer = ImageEnhance.Brightness(fractal_noise_image)
-        fractal_noise_image = enhancer.enhance(0.5)  # Adjust the factor as needed
+        # Convert upscaled image to NumPy array
+        upscaled_array = np.array(upscaled_image).astype(np.float32)
 
-        # Blend the upscaled image with the fractal noise
-        upscaled_image = upscaled_image.convert('RGB')
-        fractal_noise_image = fractal_noise_image.convert('RGB')
-        blended_image = ImageChops.add(upscaled_image, fractal_noise_image, scale=1.0, offset=0)
+        # Apply fractal noise as a multiplier
+        # Ensure fractal_noise has shape (height, width, 1) for RGB images
+        fractal_noise = fractal_noise[..., np.newaxis]
+        enhanced_array = upscaled_array * fractal_noise
 
-        # Enhance the contrast
-        enhancer = ImageEnhance.Contrast(blended_image)
+        # Clip values to valid range and convert back to uint8
+        enhanced_array = np.clip(enhanced_array, 0, 255).astype(np.uint8)
+
+        # Convert back to image
+        final_image = Image.fromarray(enhanced_array, mode='RGB')
+
+        # Optional: Enhance contrast
+        enhancer = ImageEnhance.Contrast(final_image)
         final_image = enhancer.enhance(1.2)  # Adjust the factor as needed
 
         self.image = final_image
@@ -276,7 +283,7 @@ class Immage:
         - lacunarity: Controls the frequency increase between octaves.
 
         Returns:
-        - A NumPy array of the fractal noise.
+        - A NumPy array of the fractal noise in the range [0.95, 1.05].
         """
         try:
             from noise import pnoise2
@@ -298,12 +305,18 @@ class Immage:
             amplitude *= persistence
             frequency *= lacunarity
 
-        # Normalize the noise to 0 - 255
+        # Normalize the noise to 0 - 1
         noise = noise / max_amplitude
-        noise_normalized = ((noise - noise.min()) / (noise.max() - noise.min())) * 255.0
-        noise_normalized = noise_normalized.astype(np.uint8)
+        noise_min = noise.min()
+        noise_max = noise.max()
+        noise_normalized = (noise - noise_min) / (noise_max - noise_min)  # Now between 0 and 1
 
-        return noise_normalized
+        # Scale to desired range, e.g., 0.95 to 1.05
+        desired_min = 0.95
+        desired_max = 1.05
+        noise_scaled = noise_normalized * (desired_max - desired_min) + desired_min  # Now between 0.95 and 1.05
+
+        return noise_scaled
 
     # Save and Show Methods
     def save(self, output_path, format=None):
@@ -321,3 +334,9 @@ class Immage:
         else:
             raise TypeError("Right operand must be a callable")
 
+    @classmethod
+    def version(cls):
+        """
+        Returns the version of the ImageProcessor class.
+        """
+        return cls.__version__

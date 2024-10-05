@@ -11,8 +11,7 @@ def main():
     # Apply the texture to the base image
     processor \
         .apply_texture(texture_image) \
-        .save('pix/image_with_texture.jpg')
+        .save('pix/image_with_texture.png')
 
 if __name__ == "__main__":
     main()
-
