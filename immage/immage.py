@@ -3,7 +3,8 @@ image manipulation library
 """
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance, ImageChops
-from PIL import ImageOps
+
+from .generate_texture import generate_watercolor_paper_texture
 
 
 class Immage:
@@ -317,6 +318,30 @@ class Immage:
         noise_scaled = noise_normalized * (desired_max - desired_min) + desired_min  # Now between 0.95 and 1.05
 
         return noise_scaled
+
+    @staticmethod
+    def generate_watercolor_paper_texture(
+        width=1024,
+        height=1024,
+        scale=100,
+        octaves=6,
+        persistence=0.5,
+        lacunarity=2.0,
+        color_tint=(238, 232, 205)
+    ):
+        """
+        Generates a watercolor paper texture using the external function.
+        """
+        texture_image = generate_watercolor_paper_texture(
+            width=width,
+            height=height,
+            scale=scale,
+            octaves=octaves,
+            persistence=persistence,
+            lacunarity=lacunarity,
+            color_tint=color_tint
+        )
+        return Immage(texture_image)
 
     # Save and Show Methods
     def save(self, output_path, format=None):
